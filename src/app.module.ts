@@ -39,7 +39,7 @@ import { SettingsModule } from './settings/settings.module';
           password: config.get('DB_PASSWORD'),
           database: config.get('DB_NAME'),
           autoLoadEntities: true,
-          synchronize: !isProd,                    // OFF in production
+          synchronize: false,                    // OFF in production
           logging: !isProd,
           ssl: config.get('DB_SSL') === 'true' ? { rejectUnauthorized: false } : false,
           migrations: ['dist/migrations/*.js'],
