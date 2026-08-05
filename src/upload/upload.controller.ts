@@ -7,6 +7,7 @@ import { Throttle } from '@nestjs/throttler';
 import { memoryStorage } from 'multer';
 import { UploadService } from './upload.service';
 import { Roles } from '../common/decorators/roles.decorator';
+import { Public } from '../common/decorators/public.decorator';
 import { Role } from '../common/enums';
 
 const storage = memoryStorage();
@@ -22,6 +23,24 @@ export class UploadController {
     limits: { fileSize: 5 * 1024 * 1024 },
   }))
   async uploadImage(@UploadedFile() file: Express.Multer.File) {
+    const result = await this.uploadService.uploadImage(file);
+    return {
+      url: result.secure_url,
+      publicId: result.public_id,
+      width: result.width,
+      height: result.height,
+      format: result.format,
+    };
+  }
+
+  @Public()
+  @Post('public/image')
+  @Throttle({ default: { ttl: 3600000, limit: 5 } })
+  @UseInterceptors(FileInterceptor('file', {
+    storage,
+    limits: { fileSize: 5 * 1024 * 1024 },
+  }))
+  async uploadPublicImage(@UploadedFile() file: Express.Multer.File) {
     const result = await this.uploadService.uploadImage(file);
     return {
       url: result.secure_url,
