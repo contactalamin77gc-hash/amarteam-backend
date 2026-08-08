@@ -188,6 +188,12 @@ export class PlayersService {
       equipment: (dto as any).equipment,
       hasDrone: (dto as any).hasDrone || false,
       doesEditing: (dto as any).doesEditing || false,
+      // Foreign player
+      isForeign: (dto as any).isForeign || false,
+      nationality: (dto as any).nationality,
+      currentCountry: (dto as any).currentCountry,
+      availableFrom: (dto as any).availableFrom || null,
+      availableTo: (dto as any).availableTo || null,
       portfolioPhotos: [],
       portfolioVideos: [],
     } as any);
