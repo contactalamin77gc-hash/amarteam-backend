@@ -1,6 +1,7 @@
 import {
   IsString, IsEmail, IsEnum, IsOptional, IsNumber, IsBoolean,
   IsArray, MaxLength, MinLength, Matches, Min, Max, ValidateNested,
+  IsDateString,
 } from 'class-validator';
 import { Type } from 'class-transformer';
 import { PlayerType, Position } from '../../common/enums';
@@ -94,4 +95,27 @@ export class RegisterPlayerDto {
   @IsOptional() @IsString() @MaxLength(200) equipment?: string;
   @IsOptional() @IsBoolean() hasDrone?: boolean;
   @IsOptional() @IsBoolean() doesEditing?: boolean;
+
+  //foreign player 
+  @IsOptional()
+  @IsBoolean()
+  isForeign?: boolean;
+
+  @IsOptional()
+  @IsString()
+  @MaxLength(60)
+  nationality?: string;
+
+  @IsOptional()
+  @IsString()
+  @MaxLength(60)
+  currentCountry?: string;
+
+  @IsOptional()
+  @IsDateString()
+  availableFrom?: string;
+
+  @IsOptional()
+  @IsDateString()
+  availableTo?: string;
 }

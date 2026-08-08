@@ -1,6 +1,7 @@
 import {
   IsString, IsEnum, IsBoolean, IsNumber, IsOptional,
   Min, Max, MaxLength, IsArray, IsObject, ValidateNested,
+  IsDateString,
 } from 'class-validator';
 import { Type } from 'class-transformer';
 import { Position, Tier, PlayerType } from '../../common/enums';
@@ -106,4 +107,28 @@ playerType?: PlayerType;
 
   @IsOptional() @IsNumber() @Min(0)
   matchesOfficiated?: number;
+
+  //Foreign player :
+
+  @IsOptional()
+  @IsBoolean()
+  isForeign?: boolean;
+
+  @IsOptional()
+  @IsString()
+  @MaxLength(60)
+  nationality?: string;
+
+  @IsOptional()
+  @IsString()
+  @MaxLength(60)
+  currentCountry?: string;
+
+  @IsOptional()
+  @IsDateString()
+  availableFrom?: string;
+
+  @IsOptional()
+  @IsDateString()
+  availableTo?: string;
 }
