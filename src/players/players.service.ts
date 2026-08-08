@@ -214,6 +214,7 @@ export class PlayersService {
     sort?: string;
     playerType?: string;
     district?: string;
+    nationality?: string;
     isForeign?: string;
   }): Promise<Player[]> {
     const qb = this.playersRepo.createQueryBuilder('player')
@@ -226,6 +227,7 @@ export class PlayersService {
     if (query?.tier) qb.andWhere('player.tier = :tier', { tier: query.tier });
     if (query?.position) qb.andWhere('player.position = :pos', { pos: query.position });
     if (query?.district) qb.andWhere('player.district = :dist', { dist: query.district });
+    if (query?.nationality) qb.andWhere('player.nationality = :nat', { nat: query.nationality });
     if (query?.available === 'true') qb.andWhere('player.isAvailable = true');
     if (query?.available === 'false') qb.andWhere('player.isAvailable = false');
     if (query?.isForeign !== undefined) qb.andWhere('player.isForeign = :isForeign', { isForeign: query.isForeign === 'true' });
@@ -262,6 +264,8 @@ export class PlayersService {
     playerType?: string;
     approved?: string;
     search?: string;
+    nationality?: string;
+    isForeign?: string;
   }): Promise<Player[]> {
     const qb = this.playersRepo.createQueryBuilder('player')
       .leftJoinAndSelect('player.user', 'user')

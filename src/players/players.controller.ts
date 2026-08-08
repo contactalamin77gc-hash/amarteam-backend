@@ -28,8 +28,14 @@ export class PlayersController {
     @Query('search') search?: string,
     @Query('sort') sort?: string,
     @Query('playerType') playerType?: string,
+    @Query('district') district?: string,
+    @Query('isForeign') isForeign?: string,
+    @Query('nationality') nationality?: string,
   ) {
-    return this.playersService.findAll({ tier, position, available, search, sort, playerType });
+    return this.playersService.findAll({
+      tier, position, available, search, sort, playerType,
+      district, isForeign, nationality,
+    });
   }
 
   // Public: player self-registration
@@ -79,8 +85,9 @@ async findOne(
   findAllAdmin(
     @Query('playerType') playerType?: string,
     @Query('approved') approved?: string,
+    @Query('isForeign') isForeign?: string,
   ) {
-    return this.playersService.findAllAdmin({ playerType, approved });
+    return this.playersService.findAllAdmin({ playerType, approved, isForeign });
   }
 
   // Admin: get pending registrations
