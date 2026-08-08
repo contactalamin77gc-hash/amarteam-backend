@@ -66,10 +66,9 @@ export class AuthService {
       name: user.name,
     }).catch(err => this.logger.warn(`Could not send verification email: ${err.message}`));
 
-    const token = this.sign(user);
+    // No token issued here — verifying the email is what produces one.
     return {
       user: this.clean(user),
-      token,
       requiresVerification: true,
       message: 'Account created. Check your email for the verification code.',
     };
@@ -123,10 +122,31 @@ export class AuthService {
       lastLoginAt: new Date(),
     } as any);
 
+    // Password is correct — but local accounts must prove they own the address.
+    // Checked after the password so this can't be used to enumerate accounts.
+    if (
+      user.authProvider === AuthProvider.LOCAL &&
+      !user.emailVerified &&
+      !user.phoneVerified
+    ) {
+      await this.otpService.issue({
+        identifier: user.email,
+        purpose: OtpPurpose.EMAIL_VERIFY,
+        channel: OtpChannel.EMAIL,
+        userId: user.id,
+        name: user.name,
+      }).catch(err => this.logger.warn(`Verification resend failed: ${err.message}`));
+
+      throw new ForbiddenException({
+        message: 'Please verify your email before logging in. We have sent a new code.',
+        code: 'EMAIL_NOT_VERIFIED',
+        identifier: user.email,
+      });
+    }
+
     return {
       user: this.clean(user),
       token: this.sign(user),
-      requiresVerification: !user.emailVerified && !user.phoneVerified,
     };
   }
 
