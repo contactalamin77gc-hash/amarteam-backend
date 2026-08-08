@@ -4,7 +4,7 @@ export class ForeignPlayers1786166943500 implements MigrationInterface {
     name = 'ForeignPlayers1786166943500'
 
     public async up(queryRunner: QueryRunner): Promise<void> {
-        await queryRunner.query(`ALTER TABLE "players" ADD "isForeign" boolean NOT NULL DEFAULT false`);
+        await queryRunner.query(`ALTER TABLE "players" ADD COLUMN IF NOT EXISTS "isForeign" boolean NOT NULL DEFAULT false`);
         await queryRunner.query(`ALTER TABLE "players" ADD "nationality" character varying`);
         await queryRunner.query(`ALTER TABLE "players" ADD "currentCountry" character varying`);
         await queryRunner.query(`ALTER TABLE "players" ADD "availableFrom" date`);
