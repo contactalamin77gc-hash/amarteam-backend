@@ -179,4 +179,20 @@ export class Player {
 
   @OneToMany(() => Review, (review) => review.player)
   reviews!: Review[];
+
+  // Foreign player :
+  @Column({ default: false })
+  isForeign!: boolean;
+
+  @Column({ nullable: true })
+  nationality!: string;
+
+  @Column({ nullable: true })
+  currentCountry!: string;
+
+  @Column({ type: 'date', nullable: true })
+  availableFrom!: string | null;
+
+  @Column({ type: 'date', nullable: true })
+  availableTo!: string | null;
 }
