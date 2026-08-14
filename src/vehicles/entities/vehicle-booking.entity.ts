@@ -1,3 +1,5 @@
+//src/vehicles/entities/vehicle-booking.entity.ts
+
 import {
   Entity, PrimaryGeneratedColumn, Column,
   CreateDateColumn, UpdateDateColumn, ManyToOne,

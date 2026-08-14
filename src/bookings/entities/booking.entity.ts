@@ -1,10 +1,13 @@
+//bookings/entities/booking.entity.ts
+
 import {
   Entity, PrimaryGeneratedColumn, Column,
   CreateDateColumn, UpdateDateColumn, ManyToOne,
 } from 'typeorm';
-import { BookingStatus } from '../../common/enums';
+import { BookingStatus, PaymentStatus } from '../../common/enums';
 import { User } from '../../users/entities/user.entity';
 import { Player } from '../../players/entities/player.entity';
+
 
 @Entity('bookings')
 export class Booking {
@@ -38,8 +41,32 @@ export class Booking {
   @Column({ type: 'enum', enum: BookingStatus, default: BookingStatus.PENDING })
     status!: BookingStatus;
 
+  // ─── Payment ───
+
+  @Column({ type: 'int', nullable: true })
+    finalAmount!: number | null;
+
+  @Column({ type: 'int', nullable: true })
+    advanceAmount!: number | null;
+
+  @Column({ type: 'int', nullable: true })
+    commissionRate!: number | null;
+
+  @Column({ type: 'int', nullable: true })
+    commissionAmount!: number | null;
+
+  @Column({ type: 'int', default: 0 })
+    amountPaid!: number;
+
+  @Column({ type: 'int', default: 0 })
+    payoutPaid!: number;
+
+  @Column({ type: 'enum', enum: PaymentStatus, default: PaymentStatus.UNPAID })
+    paymentStatus!: PaymentStatus;
+
   @CreateDateColumn()
     createdAt!: Date;
+
 
   @UpdateDateColumn()
     updatedAt!: Date;

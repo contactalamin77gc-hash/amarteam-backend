@@ -144,3 +144,10 @@ export enum TxStatus {
   FAILED = 'failed',
   REVERSED = 'reversed',
 }
+
+export enum PaymentStatus {
+  UNPAID = 'unpaid',
+  ADVANCE_PAID = 'advancePaid',
+  FULLY_PAID = 'fullyPaid',
+  REFUNDED = 'refunded',
+}

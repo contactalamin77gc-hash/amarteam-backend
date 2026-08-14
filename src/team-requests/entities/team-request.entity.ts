@@ -1,9 +1,10 @@
+//src/team-requests/entities/team-request.entity.ts
+
 import {
   Entity, PrimaryGeneratedColumn, Column,
   CreateDateColumn, UpdateDateColumn, ManyToOne,
 } from 'typeorm';
-import { TeamRequestStatus } from '../../common/enums';
-import { User } from '../../users/entities/user.entity';
+import { TeamRequestStatus, PaymentStatus } from '../../common/enums';import { User } from '../../users/entities/user.entity';
 
 @Entity('team_requests')
 export class TeamRequest {
@@ -57,8 +58,27 @@ export class TeamRequest {
   @Column({ type: 'jsonb', default: [] })
   suggestedPlayerIds!: string[];
 
+
+  // ─── Payment ───
+
+  @Column({ type: 'int', nullable: true })
+  commissionRate!: number | null;
+
+  @Column({ type: 'int', nullable: true })
+  commissionAmount!: number | null;
+
+  @Column({ type: 'int', default: 0 })
+  amountPaid!: number;
+
+  @Column({ type: 'int', default: 0 })
+  payoutPaid!: number;
+
+  @Column({ type: 'enum', enum: PaymentStatus, default: PaymentStatus.UNPAID })
+  paymentStatus!: PaymentStatus;
+
   @CreateDateColumn()
   createdAt!: Date;
+
 
   @UpdateDateColumn()
   updatedAt!: Date;
