@@ -111,3 +111,36 @@ export enum OtpChannel {
   EMAIL = 'email',
   SMS = 'sms',
 }
+
+export enum TxKind {
+  ADVANCE_IN = 'advanceIn',              // hirer → platform
+  FULL_IN = 'fullIn',                    // hirer paid everything upfront
+  COMMISSION = 'commission',             // platform's cut
+  PAYOUT = 'payout',                     // platform → talent
+  DIRECT_TO_PLAYER = 'directToPlayer',   // hirer → talent, recorded not held
+  REFUND = 'refund',
+}
+
+export enum TxRefType {
+  TEAM_REQUEST = 'teamRequest',
+  BOOKING = 'booking',
+  CAMERAMAN_BOOKING = 'cameramanBooking',
+  VEHICLE_BOOKING = 'vehicleBooking',
+  ORDER = 'order',
+}
+
+export enum TxMethod {
+  BKASH = 'bkash',
+  NAGAD = 'nagad',
+  CARD = 'card',
+  CASH = 'cash',
+  MANUAL = 'manual',
+}
+
+export enum TxStatus {
+  PENDING = 'pending',
+  CONFIRMED = 'confirmed',
+  HELD = 'held',
+  FAILED = 'failed',
+  REVERSED = 'reversed',
+}
