@@ -37,8 +37,8 @@ export class Transaction {
     method!: TxMethod;
 
   /** bKash/Nagad TrxID, or the gateway transaction id */
-  @Column({ nullable: true })
-    externalRef!: string | null;
+  @Column({ type: 'varchar', nullable: true })
+  externalRef!: string | null;
 
   @Column({ type: 'enum', enum: TxStatus, default: TxStatus.PENDING })
     status!: TxStatus;
