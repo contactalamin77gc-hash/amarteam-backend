@@ -1,4 +1,4 @@
-import { Injectable } from '@nestjs/common';
+import { BadRequestException, Injectable } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { Setting } from './entities/setting.entity';
@@ -25,6 +25,14 @@ export class SettingsService {
 
   async set(key: string, value: string, publicId?: string): Promise<Setting> {
     let row = await this.repo.findOne({ where: { key } });
+
+    // at the top of the set/upsert method
+if (key.startsWith('commission.') || key.startsWith('advance.')) {
+  const n = Number(value);
+  if (!Number.isFinite(n) || n < 0 || n > 100) {
+    throw new BadRequestException('Rate must be a number between 0 and 100');
+  }
+}
 
     if (row) {
       // Delete old Cloudinary asset if replacing an image

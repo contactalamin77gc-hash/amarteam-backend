@@ -21,6 +21,8 @@ import { VehiclesModule } from './vehicles/vehicles.module';
 import { ShopModule } from './shop/shop.module';
 import { CameramenModule } from './cameramen/cameramen.module';
 import { SettingsModule } from './settings/settings.module';
+import { PaymentsModule } from './payments/payments.module';
+
 
 @Module({
   imports: [
@@ -71,6 +73,7 @@ import { SettingsModule } from './settings/settings.module';
     ShopModule,
     CameramenModule,
     SettingsModule,
+    PaymentsModule,
   ],
   providers: [
     { provide: APP_GUARD, useClass: ThrottlerGuard },

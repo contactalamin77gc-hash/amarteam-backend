@@ -1,3 +1,5 @@
+//src/settings/entities/setting.entity.ts
+
 import { Entity, PrimaryGeneratedColumn, Column, UpdateDateColumn } from 'typeorm';
 
 @Entity('site_settings')
