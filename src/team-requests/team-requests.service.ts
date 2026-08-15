@@ -1,16 +1,23 @@
-import { Injectable, NotFoundException } from '@nestjs/common';
+import { Injectable, NotFoundException, Logger } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { TeamRequest } from './entities/team-request.entity';
+import { Player } from '../players/entities/player.entity';
 import { CreateTeamRequestDto } from './dto/create-team-request.dto';
 import { UpdateTeamRequestDto } from './dto/update-team-request.dto';
 import { TeamRequestStatus } from '../common/enums';
+import { BookingMailService } from '../notifications/booking-mail.service';
 
 @Injectable()
 export class TeamRequestsService {
+  private readonly logger = new Logger(TeamRequestsService.name);
+
   constructor(
     @InjectRepository(TeamRequest)
     private trRepo: Repository<TeamRequest>,
+    @InjectRepository(Player)
+    private playersRepo: Repository<Player>,
+    private bookingMail: BookingMailService,
   ) {}
 
   async create(hirerId: string, dto: CreateTeamRequestDto): Promise<TeamRequest> {
@@ -63,11 +70,25 @@ export class TeamRequestsService {
 
   async update(id: string, dto: UpdateTeamRequestDto): Promise<TeamRequest> {
     const tr = await this.findOne(id);
+    const previousStatus = tr.status;
+
     if (dto.status !== undefined) tr.status = dto.status;
     if (dto.adminNote !== undefined) tr.adminNote = dto.adminNote;
     if (dto.finalAmount !== undefined) tr.finalAmount = dto.finalAmount;
     if (dto.advanceAmount !== undefined) tr.advanceAmount = dto.advanceAmount;
-    return this.trRepo.save(tr);
+    // Carries the per-player fees admin assigns after the confirmation call.
+    if (dto.squad !== undefined) tr.squad = dto.squad as any;
+
+    const saved = await this.trRepo.save(tr);
+
+    // Fire-and-forget: a mail failure must never roll back a status change.
+    if (dto.status !== undefined && dto.status !== previousStatus) {
+      this.notifyStatus(saved, dto.status).catch(err =>
+        this.logger.warn(`Status mail failed for ${id}: ${err.message}`),
+      );
+    }
+
+    return saved;
   }
 
   async suggestPlayers(id: string, playerIds: string[]): Promise<TeamRequest> {
@@ -79,5 +100,52 @@ export class TeamRequestsService {
   async remove(id: string): Promise<void> {
     const tr = await this.findOne(id);
     await this.trRepo.remove(tr);
+  }
+
+  // ══════════ NOTIFICATIONS ══════════
+
+  private async notifyStatus(tr: any, status: string) {
+    const email = tr.hirer?.email;
+    const name = tr.hirer?.name || 'there';
+
+    if (status === TeamRequestStatus.CONFIRMED) {
+      await this.bookingMail.teamConfirmed(email, name, tr);
+
+      // Each player gets their own fee and the list of who else is going.
+      for (const s of tr.squad || []) {
+        const player = await this.playersRepo.findOne({
+          where: { id: s.playerId },
+          relations: ['user'],
+        });
+        if (!player?.user?.email) continue;
+
+        const mates = (tr.squad || [])
+          .filter((o: any) => o.playerId !== s.playerId)
+          .map((o: any) => `${o.playerName} — ${o.playerPosition}`);
+
+        await this.bookingMail.talentConfirmed(
+          player.user.email,
+          player.user.name,
+          tr,
+          s.amount || 0,
+          mates,
+        );
+      }
+      return;
+    }
+
+    if (status === TeamRequestStatus.PLAYER_ON_THE_WAY) {
+      await this.bookingMail.playersOnTheWay(email, name, tr);
+      return;
+    }
+
+    if (status === TeamRequestStatus.COMPLETED) {
+      await this.bookingMail.teamCompleted(email, name, tr);
+      return;
+    }
+
+    if (status === TeamRequestStatus.CANCELLED) {
+      await this.bookingMail.teamCancelled(email, name, tr, tr.adminNote);
+    }
   }
 }

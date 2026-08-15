@@ -48,6 +48,7 @@ export enum TeamRequestStatus {
   CALLING_SOON = 'callingSoon',
   ADVANCE_PENDING = 'advancePending',
   CONFIRMED = 'confirmed',
+  PLAYER_ON_THE_WAY = 'playerOnTheWay',
   COMPLETED = 'completed',
   CANCELLED = 'cancelled',
 }
