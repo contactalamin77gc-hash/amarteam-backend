@@ -35,12 +35,14 @@ export class TeamRequest {
   @Column({ type: 'text', nullable: true })
   message!: string;
 
-  @Column({ type: 'jsonb', default: [] })
+ @Column({ type: 'jsonb', default: [] })
   squad!: {
     positionKey: string;
     playerId: string;
     playerName: string;
     playerPosition: string;
+    /** Fee assigned by admin after the confirmation call. */
+    amount?: number;
   }[];
 
   @Column({ type: 'enum', enum: TeamRequestStatus, default: TeamRequestStatus.CALLING_SOON })

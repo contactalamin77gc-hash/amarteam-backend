@@ -310,4 +310,130 @@ export class PaymentsService {
              - by(TxKind.COMMISSION) - by(TxKind.PAYOUT) - by(TxKind.REFUND),
     };
   }
+
+  // ══════════ TALENT-FACING ══════════
+
+  /**
+   * What one player can see about their own money.
+   * Only exposes a booking once the hirer's advance has actually landed —
+   * before that the numbers aren't final and shouldn't be shown.
+   */
+  async myEarnings(playerId: string) {
+    const out: any[] = [];
+
+    // ─── Individual bookings ───
+    const bookings = await this.bookingRepo.find({
+      where: { playerId },
+      order: { matchDate: 'DESC' },
+    });
+
+    for (const b of bookings as any[]) {
+      if (b.paymentStatus === PaymentStatus.UNPAID) continue;
+
+      const fee = b.finalAmount ?? b.amount ?? 0;
+      const commission = b.commissionAmount ?? 0;
+      const paid = await this.paidToPlayer(TxRefType.BOOKING, b.id, playerId);
+
+      // Others hired by the same hirer for the same match
+      const others = await this.bookingRepo.find({
+        where: { hirerId: b.hirerId, matchDate: b.matchDate },
+      });
+
+      out.push({
+        refType: TxRefType.BOOKING,
+        refId: b.id,
+        matchDate: b.matchDate,
+        tournament: b.tournament,
+        hirerName: b.hirer?.name ?? null,
+        hirerPhone: b.hirer?.phone ?? null,
+        status: b.status,
+        fee,
+        commissionRate: b.commissionRate ?? 0,
+        commission,
+        youReceive: fee - commission,
+        paidToYou: paid,
+        collectFromHirer: Math.max(0, fee - commission - paid),
+        teammates: (others as any[])
+          .filter(o => o.playerId !== playerId)
+          .map(o => ({
+            name: o.player?.user?.name ?? 'Player',
+            position: o.player?.position ?? null,
+            photo: o.player?.photo ?? null,
+          })),
+      });
+    }
+
+    // ─── Team requests where this player is in the squad ───
+    const teamReqs = await this.teamRepo
+      .createQueryBuilder('tr')
+      .where(`tr.squad @> :entry`, { entry: JSON.stringify([{ playerId }]) })
+      .orderBy('tr.matchDate', 'DESC')
+      .getMany();
+
+    for (const tr of teamReqs as any[]) {
+      if (tr.paymentStatus === PaymentStatus.UNPAID) continue;
+
+      const mine = (tr.squad || []).find((s: any) => s.playerId === playerId);
+      const fee = mine?.amount ?? 0;
+
+      // Commission is on the total, so each player carries their share pro-rata.
+      const squadTotal = (tr.squad || [])
+        .reduce((sum: number, s: any) => sum + (s.amount || 0), 0);
+      const commission = squadTotal > 0
+        ? Math.round(((tr.commissionAmount ?? 0) * fee) / squadTotal)
+        : 0;
+
+      const paid = await this.paidToPlayer(TxRefType.TEAM_REQUEST, tr.id, playerId);
+
+      out.push({
+        refType: TxRefType.TEAM_REQUEST,
+        refId: tr.id,
+        matchDate: tr.matchDate,
+        tournament: tr.tournament,
+        location: tr.location,
+        hirerName: tr.hirer?.name ?? null,
+        hirerPhone: tr.hirer?.phone ?? null,
+        status: tr.status,
+        fee,
+        commissionRate: tr.commissionRate ?? 0,
+        commission,
+        youReceive: fee - commission,
+        paidToYou: paid,
+        collectFromHirer: Math.max(0, fee - commission - paid),
+        feeAssigned: fee > 0,
+        teammates: (tr.squad || [])
+          .filter((s: any) => s.playerId !== playerId)
+          .map((s: any) => ({
+            name: s.playerName,
+            position: s.playerPosition,
+            photo: null,
+          })),
+      });
+    }
+
+    out.sort((a, b) => String(b.matchDate).localeCompare(String(a.matchDate)));
+
+    return {
+      matches: out,
+      totals: {
+        earned: out.reduce((s, m) => s + m.youReceive, 0),
+        received: out.reduce((s, m) => s + m.paidToYou, 0),
+        toCollect: out.reduce((s, m) => s + m.collectFromHirer, 0),
+      },
+    };
+  }
+
+  /** Sum of confirmed payouts to one player on one booking. */
+  private async paidToPlayer(refType: TxRefType, refId: string, playerId: string) {
+    const row = await this.txRepo
+      .createQueryBuilder('t')
+      .select('COALESCE(SUM(t.amount), 0)', 'sum')
+      .where('t.refType = :refType', { refType })
+      .andWhere('t.refId = :refId', { refId })
+      .andWhere('t.playerId = :playerId', { playerId })
+      .andWhere('t.kind IN (:...kinds)', { kinds: [TxKind.PAYOUT, TxKind.DIRECT_TO_PLAYER] })
+      .andWhere('t.status = :s', { s: TxStatus.CONFIRMED })
+      .getRawOne();
+    return Number(row?.sum ?? 0);
+  }
 }

@@ -13,4 +13,6 @@ export class UpdateTeamRequestDto {
 
   @IsOptional() @IsNumber() @Min(0)
   advanceAmount?: number;
+  @IsOptional() @IsNumber() @Min(0)
+  amount?: number;
 }

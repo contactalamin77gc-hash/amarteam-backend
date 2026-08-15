@@ -7,11 +7,14 @@ import { Roles } from '../common/decorators/roles.decorator';
 import { CurrentUser } from '../common/decorators/current-user.decorator';
 import { Role, TxRefType } from '../common/enums';
 import { User } from '../users/entities/user.entity';
+import { PlayersService } from '../players/players.service';
 
 @Controller('payments')
 @Roles(Role.ADMIN)
 export class PaymentsController {
-  constructor(private payments: PaymentsService) {}
+  playersService: any;
+  constructor(private payments: PaymentsService, 
+    private players: PlayersService) {}
 
   /** Current commission + advance percentages. */
   @Get('rates')
@@ -41,6 +44,15 @@ export class PaymentsController {
   @Get('totals')
   totals() {
     return this.payments.totals();
+  }
+
+  /** Talent's own earnings. Scoped to the caller — never accepts a playerId. */
+  @Get('my-earnings')
+  @Roles(Role.PLAYER)
+  async myEarnings(@CurrentUser() user: User) {
+    const player = await this.playersService.findByUserId(user.id);
+    if (!player) return { matches: [], totals: { earned: 0, received: 0, toCollect: 0 } };
+    return this.payments.myEarnings(player.id);
   }
 
   /** Hirer's money arrived. Admin verifies the TrxID and records it. */
