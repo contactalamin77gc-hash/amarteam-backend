@@ -14,8 +14,9 @@ import { PlayersModule } from '../players/players.module';
   imports: [
     TypeOrmModule.forFeature([
       Transaction, Setting, Booking,
-      TeamRequest, CameramanBooking, VehicleBooking,PlayersModule,
+      TeamRequest, CameramanBooking, VehicleBooking,
     ]),
+    PlayersModule,
   ],
   controllers: [PaymentsController],
   providers: [PaymentsService],

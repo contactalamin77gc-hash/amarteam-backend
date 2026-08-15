@@ -1,3 +1,5 @@
+//vehicle.entity.ts
+
 import {
   Entity, PrimaryGeneratedColumn, Column,
   CreateDateColumn, UpdateDateColumn, OneToMany,
