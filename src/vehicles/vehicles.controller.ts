@@ -34,11 +34,13 @@ export class VehiclesController {
   // ─── BOOKINGS (specific routes before :id) ───
 
   @Post('bookings')
+  @Roles(Role.HIRER)
   createBooking(@CurrentUser() user: User, @Body() dto: CreateVehicleBookingDto) {
     return this.vehiclesService.createBooking(user.id, dto);
   }
 
   @Get('bookings/my')
+  @Roles(Role.HIRER)
   getMyBookings(@CurrentUser() user: User) {
     return this.vehiclesService.findMyBookings(user.id);
   }

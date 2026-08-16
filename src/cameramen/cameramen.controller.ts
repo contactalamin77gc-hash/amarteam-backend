@@ -15,11 +15,13 @@ export class CameramenController {
   constructor(private cmService: CameramenService) {}
 
   @Post('bookings')
+  @Roles(Role.HIRER)
   createBooking(@CurrentUser() user: User, @Body() dto: CreateCameramanBookingDto) {
     return this.cmService.createBooking(user.id, dto);
   }
 
   @Get('bookings/my')
+  @Roles(Role.HIRER)
   getMyBookings(@CurrentUser() user: User) {
     return this.cmService.findMyBookings(user.id);
   }

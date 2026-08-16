@@ -171,6 +171,17 @@ export class PaymentsService {
         ref.commissionAmount = Math.round((total * ref.commissionRate) / 100);
       }
 
+      if (dto.externalRef) {
+        const dup = await mgr.count(Transaction, {
+          where: { externalRef: dto.externalRef, refType: dto.refType },
+        });
+        if (dup > 0) {
+          throw new BadRequestException(
+            `Payment with TrxID "${dto.externalRef}" has already been recorded.`,
+          );
+        }
+      }
+
       const alreadyPaid = ref.amountPaid ?? 0;
       if (alreadyPaid + dto.amount > total) {
         throw new BadRequestException(

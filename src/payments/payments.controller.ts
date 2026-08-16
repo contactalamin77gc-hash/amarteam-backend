@@ -12,8 +12,7 @@ import { PlayersService } from '../players/players.service';
 @Controller('payments')
 @Roles(Role.ADMIN)
 export class PaymentsController {
-  playersService: any;
-  constructor(private payments: PaymentsService, 
+  constructor(private payments: PaymentsService,
     private players: PlayersService) {}
 
   /** Current commission + advance percentages. */
@@ -50,7 +49,7 @@ export class PaymentsController {
   @Get('my-earnings')
   @Roles(Role.PLAYER)
   async myEarnings(@CurrentUser() user: User) {
-    const player = await this.playersService.findByUserId(user.id);
+    const player = await this.players.findByUserId(user.id);
     if (!player) return { matches: [], totals: { earned: 0, received: 0, toCollect: 0 } };
     return this.payments.myEarnings(player.id);
   }

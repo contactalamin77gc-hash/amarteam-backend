@@ -23,15 +23,15 @@ class NationalTeamEntryDto {
 }
 
 class ChargesDto {
-  @IsNumber() @Min(500)
+  @IsNumber() @Min(500) @Max(500_000)
   friendly!: number;
-  @IsNumber() @Min(500)
+  @IsNumber() @Min(500) @Max(500_000)
   groupRound!: number;
-  @IsNumber() @Min(500)
+  @IsNumber() @Min(500) @Max(500_000)
   final!: number;
-  @IsOptional() @IsNumber() @Min(0) friendlyDiscount?: number | null;
-  @IsOptional() @IsNumber() @Min(0) groupRoundDiscount?: number | null;
-  @IsOptional() @IsNumber() @Min(0) finalDiscount?: number | null;
+  @IsOptional() @IsNumber() @Min(0) @Max(500_000) friendlyDiscount?: number | null;
+  @IsOptional() @IsNumber() @Min(0) @Max(500_000) groupRoundDiscount?: number | null;
+  @IsOptional() @IsNumber() @Min(0) @Max(500_000) finalDiscount?: number | null;
 }
 
 class VideoEntryDto {

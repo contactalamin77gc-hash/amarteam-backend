@@ -68,7 +68,14 @@ export class UsersService {
   }
 
   async update(id: string, data: Partial<User>): Promise<User> {
-    const result = await this.usersRepo.update(id, data);
+    let patch = data;
+    if (data.phone !== undefined) {
+      const existing = await this.usersRepo.findOne({ where: { id }, select: ['id', 'phone'] as (keyof User)[] });
+      if (existing && data.phone !== existing.phone) {
+        patch = { ...data, phoneVerified: false };
+      }
+    }
+    const result = await this.usersRepo.update(id, patch);
     if (result.affected === 0) throw new NotFoundException('User not found');
     return this.findById(id) as Promise<User>;
   }

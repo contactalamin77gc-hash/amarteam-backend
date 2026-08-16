@@ -68,6 +68,7 @@ async findOne(
 
   // Player: get own profile
   @Get('me/profile')
+  @Roles(Role.PLAYER)
   getMyProfile(@CurrentUser() user: User) {
     return this.playersService.findByUserId(user.id);
   }

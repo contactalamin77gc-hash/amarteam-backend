@@ -8,6 +8,7 @@ import { User } from '../../users/entities/user.entity';
 
 @Entity('transactions')
 @Index(['refType', 'refId'])
+@Index('UQ_tx_externalRef_refType', ['externalRef', 'refType'], { unique: true, where: '"externalRef" IS NOT NULL' })
 export class Transaction {
   @PrimaryGeneratedColumn('uuid')
     id!: string;
