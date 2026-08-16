@@ -38,10 +38,12 @@ export enum PlayerType {
 }
 
 export enum BookingStatus {
-  PENDING = 'pending',
+  CALLING_SOON = 'callingSoon',
+  ADVANCE_PENDING = 'advancePending',
   CONFIRMED = 'confirmed',
-  CANCELLED = 'cancelled',
+  PLAYER_ON_THE_WAY = 'playerOnTheWay',
   COMPLETED = 'completed',
+  CANCELLED = 'cancelled',
 }
 
 export enum TeamRequestStatus {

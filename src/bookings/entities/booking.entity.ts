@@ -38,8 +38,11 @@ export class Booking {
   @Column({ type: 'int' })
     amount!: number;
 
-  @Column({ type: 'enum', enum: BookingStatus, default: BookingStatus.PENDING })
+  @Column({ type: 'enum', enum: BookingStatus, default: BookingStatus.CALLING_SOON })
     status!: BookingStatus;
+
+  @Column({ type: 'text', nullable: true })
+    adminNote!: string | null;
 
   // ─── Payment ───
 

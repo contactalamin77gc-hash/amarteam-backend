@@ -4,6 +4,7 @@ import {
 } from '@nestjs/common';
 import { BookingsService } from './bookings.service';
 import { CreateBookingDto } from './dto/create-booking.dto';
+import { UpdateBookingDto } from './dto/update-booking.dto';
 import { Roles } from '../common/decorators/roles.decorator';
 import { CurrentUser } from '../common/decorators/current-user.decorator';
 import { Role, BookingStatus } from '../common/enums';
@@ -39,6 +40,23 @@ export class BookingsController {
   @Roles(Role.ADMIN)
   findAll() {
     return this.bookingsService.findAll();
+  }
+
+  // Admin: single booking with full relations
+  @Get(':id')
+  @Roles(Role.ADMIN)
+  findOne(@Param('id', ParseUUIDPipe) id: string) {
+    return this.bookingsService.findOne(id);
+  }
+
+  // Admin: full update — status, amounts, notes
+  @Patch(':id')
+  @Roles(Role.ADMIN)
+  update(
+    @Param('id', ParseUUIDPipe) id: string,
+    @Body() dto: UpdateBookingDto,
+  ) {
+    return this.bookingsService.update(id, dto);
   }
 
   // Admin: confirm booking
