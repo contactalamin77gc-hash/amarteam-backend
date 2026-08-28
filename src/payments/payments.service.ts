@@ -1,5 +1,6 @@
 import {
   Injectable, NotFoundException, BadRequestException, Logger,
+  ForbiddenException,
 } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository, DataSource, EntityManager } from 'typeorm';
@@ -11,9 +12,12 @@ import { CameramanBooking } from '../cameramen/entities/cameraman-booking.entity
 import { VehicleBooking } from '../vehicles/entities/vehicle-booking.entity';
 import {
   TxKind, TxRefType, TxMethod, TxStatus, PaymentStatus,
+  ClaimStatus,
 } from '../common/enums';
 import { RecordPaymentDto, RecordPayoutDto, RecordDirectDto } from './dto/payment.dto';
 import { Order } from '../shop/entities/order.entity';
+import { PaymentClaim } from './entities/payment-claim.entity';
+import { ReviewClaimDto, SubmitClaimDto } from './dto/claim.dto';
 
 /** Which commission + advance setting keys apply to each booking type. */
 const RULES: Record<TxRefType, { commissionKey: string; advanceKey: string }> = {
@@ -47,6 +51,7 @@ export class PaymentsService {
     @InjectRepository(CameramanBooking) private camRepo: Repository<CameramanBooking>,
     @InjectRepository(VehicleBooking) private vehRepo: Repository<VehicleBooking>,
     @InjectRepository(Order) private orderRepo: Repository<Order>,
+        @InjectRepository(PaymentClaim) private claimRepo: Repository<PaymentClaim>,
     private dataSource: DataSource,
   ) {}
 
@@ -452,4 +457,163 @@ export class PaymentsService {
       .getRawOne();
     return Number(row?.sum ?? 0);
   }
+
+  // ══════════ PAYMENT CLAIMS ══════════
+
+  /** A hirer can only claim against bookings they own. */
+  private async assertOwnership(refType: TxRefType, refId: string, userId: string) {
+    const ref: any = await this.loadRef(refType, refId);
+    const owner = ref.hirerId ?? ref.customerId;
+    if (owner !== userId) {
+      throw new ForbiddenException('This booking does not belong to you');
+    }
+    return ref;
+  }
+
+  /**
+   * Hirer declares "I sent this TrxID covering these bookings."
+   * Nothing moves in the ledger until an admin verifies it.
+   */
+  async submitClaim(userId: string, dto: SubmitClaimDto) {
+    const externalRef = dto.externalRef.trim();
+
+    const duplicate = await this.claimRepo.findOne({
+      where: [
+        { externalRef, status: ClaimStatus.PENDING },
+        { externalRef, status: ClaimStatus.APPROVED },
+      ],
+    });
+    if (duplicate) {
+      throw new BadRequestException(
+        'This transaction ID has already been submitted. Check your payment history.',
+      );
+    }
+
+    // Validate every line before accepting any of it, so the hirer is told
+    // immediately rather than the claim failing when admin tries to approve.
+    for (const r of dto.refs) {
+      const ref = await this.assertOwnership(r.refType, r.refId, userId);
+      const total = this.totalOf(r.refType, ref);
+      const remaining = total - (ref.amountPaid ?? 0);
+
+      if (remaining <= 0) {
+        throw new BadRequestException(`"${r.label ?? 'One of these bookings'}" is already fully paid.`);
+      }
+      if (r.amount > remaining) {
+        throw new BadRequestException(
+          `৳${r.amount.toLocaleString()} is more than the ৳${remaining.toLocaleString()} remaining on "${r.label ?? 'one of these bookings'}".`,
+        );
+      }
+    }
+
+    const totalAmount = dto.refs.reduce((s, r) => s + r.amount, 0);
+
+    const claim = await this.claimRepo.save(this.claimRepo.create({
+      userId,
+      refs: dto.refs,
+      totalAmount,
+      method: dto.method,
+      externalRef,
+      senderNumber: dto.senderNumber ?? null,
+      note: dto.note ?? null,
+      status: ClaimStatus.PENDING,
+    }));
+
+    this.logger.log(`Claim ${claim.id} submitted: ৳${totalAmount}, ref ${externalRef}`);
+    return claim;
+  }
+
+  async myClaims(userId: string) {
+    return this.claimRepo.find({ where: { userId }, order: { createdAt: 'DESC' } });
+  }
+
+  async listClaims(status?: ClaimStatus) {
+    return this.claimRepo.find({
+      where: status ? { status } : {},
+      relations: ['user'],
+      order: { createdAt: 'DESC' },
+    });
+  }
+
+  /** Everything a claim touches, resolved for the admin review screen. */
+  async claimDetail(claimId: string) {
+    const claim = await this.claimRepo.findOne({
+      where: { id: claimId },
+      relations: ['user'],
+    });
+    if (!claim) throw new NotFoundException('Claim not found');
+
+    const lines: any[] = [];
+    for (const r of claim.refs) {
+      try {
+        const ref: any = await this.loadRef(r.refType, r.refId);
+        const total = this.totalOf(r.refType, ref);
+        lines.push({
+          ...r,
+          total,
+          amountPaid: ref.amountPaid ?? 0,
+          remaining: total - (ref.amountPaid ?? 0),
+          status: ref.status,
+        });
+      } catch {
+        lines.push({ ...r, missing: true });
+      }
+    }
+    return { claim, lines };
+  }
+
+  /**
+   * Admin has verified the TrxID in their bKash/Nagad app.
+   * Records a real payment against each booking in the claim.
+   */
+  async approveClaim(claimId: string, adminId: string, dto: ReviewClaimDto) {
+    const claim = await this.claimRepo.findOne({ where: { id: claimId } });
+    if (!claim) throw new NotFoundException('Claim not found');
+    if (claim.status !== ClaimStatus.PENDING) {
+      throw new BadRequestException(`This claim is already ${claim.status}`);
+    }
+
+    // Suffixed so one real TrxID can span several bookings without
+    // colliding with the unique index on (externalRef, refType).
+    const results: any[] = [];
+    for (let i = 0; i < claim.refs.length; i++) {
+      const r = claim.refs[i];
+      results.push(await this.recordPayment({
+        refType: r.refType,
+        refId: r.refId,
+        amount: r.amount,
+        method: claim.method,
+        externalRef: claim.refs.length > 1
+          ? `${claim.externalRef}#${i + 1}`
+          : claim.externalRef,
+        note: `Verified claim ${claim.id.slice(0, 8)}`,
+      }, adminId));
+    }
+
+    claim.status = ClaimStatus.APPROVED;
+    claim.adminNote = dto.adminNote ?? null;
+    claim.reviewedById = adminId;
+    claim.reviewedAt = new Date();
+    await this.claimRepo.save(claim);
+
+    this.logger.log(`Claim ${claim.id} approved: ৳${claim.totalAmount}`);
+    return { claim, results };
+  }
+
+  async rejectClaim(claimId: string, adminId: string, dto: ReviewClaimDto) {
+    const claim = await this.claimRepo.findOne({ where: { id: claimId } });
+    if (!claim) throw new NotFoundException('Claim not found');
+    if (claim.status !== ClaimStatus.PENDING) {
+      throw new BadRequestException(`This claim is already ${claim.status}`);
+    }
+
+    claim.status = ClaimStatus.REJECTED;
+    claim.adminNote = dto.adminNote ?? 'We could not find this transaction. Please check the ID.';
+    claim.reviewedById = adminId;
+    claim.reviewedAt = new Date();
+    return this.claimRepo.save(claim);
+  }
+
+
+
 }

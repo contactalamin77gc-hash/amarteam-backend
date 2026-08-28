@@ -8,6 +8,7 @@ import { CreateBookingDto } from './dto/create-booking.dto';
 import { UpdateBookingDto } from './dto/update-booking.dto';
 import { PlayersService } from '../players/players.service';
 import { BookingMailService } from '../notifications/booking-mail.service';
+import { SmsService } from '../notifications/sms.service';
 import { BookingStatus } from '../common/enums';
 
 @Injectable()
@@ -19,6 +20,7 @@ export class BookingsService {
     private bookingsRepo: Repository<Booking>,
     private playersService: PlayersService,
     private bookingMail: BookingMailService,
+    private sms: SmsService,
   ) {}
 
   async create(hirerId: string, dto: CreateBookingDto): Promise<Booking> {
@@ -112,10 +114,10 @@ export class BookingsService {
 
     const saved = await this.bookingsRepo.save(booking);
 
-    // Fire-and-forget — a mail failure must not roll back the status change.
+    // Fire-and-forget — a mail or SMS failure must not roll back the status change.
     if (dto.status !== undefined && dto.status !== previousStatus) {
       this.notifyStatus(saved, dto.status).catch(err =>
-        this.logger.warn(`Status mail failed for booking ${id}: ${err.message}`),
+        this.logger.warn(`Status notification failed for booking ${id}: ${err.message}`),
       );
     }
 
@@ -132,6 +134,8 @@ export class BookingsService {
   private async notifyStatus(booking: any, status: string) {
     const hirerEmail = booking.hirer?.email;
     const hirerName = booking.hirer?.name || 'there';
+    const hirerPhone = booking.hirer?.phone || null;
+    const agreed = booking.finalAmount ?? booking.amount ?? 0;
 
     // Shape a single booking to look like a team request so the
     // existing mail templates can render it unchanged.
@@ -139,7 +143,7 @@ export class BookingsService {
       matchDate: booking.matchDate,
       tournament: booking.tournament,
       location: null,
-      finalAmount: booking.finalAmount ?? booking.amount,
+      finalAmount: agreed,
       amountPaid: booking.amountPaid ?? 0,
       adminNote: booking.adminNote,
       hirer: booking.hirer,
@@ -147,28 +151,35 @@ export class BookingsService {
         playerId: booking.playerId,
         playerName: booking.player?.user?.name || 'Player',
         playerPosition: booking.player?.position || '',
-        amount: booking.finalAmount ?? booking.amount,
+        amount: agreed,
       }] : [],
     };
 
     if (status === BookingStatus.CONFIRMED) {
       await this.bookingMail.teamConfirmed(hirerEmail, hirerName, asRequest);
+      await this.sms.hirerConfirmed(hirerPhone, {
+        matchDate: booking.matchDate,
+        players: 1,
+        total: agreed,
+        paid: booking.amountPaid ?? 0,
+      });
 
-      const talentEmail = booking.player?.user?.email;
-      if (talentEmail) {
+      const talent = booking.player?.user;
+      if (talent) {
         await this.bookingMail.talentConfirmed(
-          talentEmail,
-          booking.player.user.name,
-          asRequest,
-          booking.finalAmount ?? booking.amount ?? 0,
-          [],   // solo booking, no teammates
+          talent.email, talent.name, asRequest, agreed, [],
         );
+        await this.sms.talentConfirmed(talent.phone || null, {
+          matchDate: booking.matchDate,
+          fee: agreed,
+        });
       }
       return;
     }
 
     if (status === BookingStatus.PLAYER_ON_THE_WAY) {
       await this.bookingMail.playersOnTheWay(hirerEmail, hirerName, asRequest);
+      await this.sms.hirerOnTheWay(hirerPhone, booking.matchDate);
       return;
     }
 
@@ -179,6 +190,7 @@ export class BookingsService {
 
     if (status === BookingStatus.CANCELLED) {
       await this.bookingMail.teamCancelled(hirerEmail, hirerName, asRequest, booking.adminNote);
+      await this.sms.hirerCancelled(hirerPhone, booking.matchDate);
     }
   }
 }

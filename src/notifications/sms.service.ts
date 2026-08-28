@@ -79,4 +79,64 @@ export class SmsService {
   async sendBookingConfirmed(phone: string, detail: string) {
     await this.send(phone, `Amar Team: Your booking is confirmed. ${detail}`);
   }
+
+    // ─── Booking notifications ───
+  // These never throw. A failed SMS must not roll back a status change.
+
+  private async sendQuietly(phone: string | null | undefined, message: string) {
+    if (!phone) return;
+    try {
+      await this.send(phone, message);
+    } catch (err: any) {
+      this.logger.warn(`Booking SMS failed to ${phone}: ${err.message}`);
+    }
+  }
+
+  /** Hirer — booking confirmed, with the balance still owed. */
+  async hirerConfirmed(phone: string | null, opts: {
+    matchDate?: string; players: number; total: number; paid: number;
+  }) {
+    const due = Math.max(0, opts.total - opts.paid);
+    await this.sendQuietly(phone,
+      `Amar Team: Booking confirmed for ${opts.matchDate || 'your match'}. ` +
+      `${opts.players} talent booked. Total Tk${opts.total}. ` +
+      (due > 0 ? `Balance Tk${due} due on match day.` : `Fully paid.`),
+    );
+  }
+
+  /** Hirer — advance received. */
+  async hirerPaymentReceived(phone: string | null, amount: number, due: number) {
+    await this.sendQuietly(phone,
+      `Amar Team: We received Tk${amount}. ` +
+      (due > 0 ? `Tk${due} remaining.` : `Your booking is fully paid.`),
+    );
+  }
+
+  /** Hirer — talent has left for the venue. */
+  async hirerOnTheWay(phone: string | null, matchDate?: string) {
+    await this.sendQuietly(phone,
+      `Amar Team: Your players are on the way for ${matchDate || 'the match'}. ` +
+      `Please keep the balance ready.`,
+    );
+  }
+
+  /** Talent — confirmed for a match. Own fee only, never the squad total. */
+  async talentConfirmed(phone: string | null, opts: {
+    matchDate?: string; venue?: string; fee: number;
+  }) {
+    await this.sendQuietly(phone,
+      `Amar Team: You are confirmed for ${opts.matchDate || 'a match'}` +
+      (opts.venue ? ` at ${opts.venue}` : '') + '. ' +
+      (opts.fee > 0 ? `Your fee: Tk${opts.fee}. ` : '') +
+      `Check your panel for details.`,
+    );
+  }
+
+  /** Hirer — cancelled. */
+  async hirerCancelled(phone: string | null, matchDate?: string) {
+    await this.sendQuietly(phone,
+      `Amar Team: Your booking for ${matchDate || 'the match'} has been cancelled. ` +
+      `We will contact you shortly.`,
+    );
+  }
 }

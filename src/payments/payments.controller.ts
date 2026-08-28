@@ -8,6 +8,8 @@ import { CurrentUser } from '../common/decorators/current-user.decorator';
 import { Role, TxRefType } from '../common/enums';
 import { User } from '../users/entities/user.entity';
 import { PlayersService } from '../players/players.service';
+import { SubmitClaimDto, ReviewClaimDto } from './dto/claim.dto';
+import { ClaimStatus } from '../common/enums';
 
 @Controller('payments')
 @Roles(Role.ADMIN)
@@ -71,4 +73,50 @@ export class PaymentsController {
   direct(@Body() dto: RecordDirectDto, @CurrentUser() user: User) {
     return this.payments.recordDirect(dto, user.id);
   }
+
+    // ─── Hirer ───
+
+  /** Submit a bKash/Nagad reference covering one or more bookings. */
+  @Post('claims')
+  @Roles(Role.HIRER)
+  submitClaim(@Body() dto: SubmitClaimDto, @CurrentUser() user: User) {
+    return this.payments.submitClaim(user.id, dto);
+  }
+
+  @Get('claims/my')
+  @Roles(Role.HIRER)
+  myClaims(@CurrentUser() user: User) {
+    return this.payments.myClaims(user.id);
+  }
+
+  // ─── Admin ───
+
+  @Get('claims')
+  listClaims(@Query('status') status?: ClaimStatus) {
+    return this.payments.listClaims(status);
+  }
+
+  @Get('claims/:id')
+  claimDetail(@Param('id', ParseUUIDPipe) id: string) {
+    return this.payments.claimDetail(id);
+  }
+
+  @Post('claims/:id/approve')
+  approveClaim(
+    @Param('id', ParseUUIDPipe) id: string,
+    @Body() dto: ReviewClaimDto,
+    @CurrentUser() user: User,
+  ) {
+    return this.payments.approveClaim(id, user.id, dto);
+  }
+
+  @Post('claims/:id/reject')
+  rejectClaim(
+    @Param('id', ParseUUIDPipe) id: string,
+    @Body() dto: ReviewClaimDto,
+    @CurrentUser() user: User,
+  ) {
+    return this.payments.rejectClaim(id, user.id, dto);
+  }
+
 }

@@ -7,6 +7,8 @@ import { CreateTeamRequestDto } from './dto/create-team-request.dto';
 import { UpdateTeamRequestDto } from './dto/update-team-request.dto';
 import { TeamRequestStatus } from '../common/enums';
 import { BookingMailService } from '../notifications/booking-mail.service';
+import { SmsService } from '../notifications/sms.service';
+
 
 @Injectable()
 export class TeamRequestsService {
@@ -18,6 +20,8 @@ export class TeamRequestsService {
     @InjectRepository(Player)
     private playersRepo: Repository<Player>,
     private bookingMail: BookingMailService,
+        private sms: SmsService,
+
   ) {}
 
   async create(hirerId: string, dto: CreateTeamRequestDto): Promise<TeamRequest> {
@@ -104,12 +108,19 @@ export class TeamRequestsService {
 
   // ══════════ NOTIFICATIONS ══════════
 
-  private async notifyStatus(tr: any, status: string) {
+   private async notifyStatus(tr: any, status: string) {
     const email = tr.hirer?.email;
     const name = tr.hirer?.name || 'there';
+    const phone = tr.hirer?.phone || null;
 
     if (status === TeamRequestStatus.CONFIRMED) {
       await this.bookingMail.teamConfirmed(email, name, tr);
+      await this.sms.hirerConfirmed(phone, {
+        matchDate: tr.matchDate,
+        players: (tr.squad || []).length,
+        total: tr.finalAmount || 0,
+        paid: tr.amountPaid || 0,
+      });
 
       // Each player gets their own fee and the list of who else is going.
       for (const s of tr.squad || []) {
@@ -117,25 +128,27 @@ export class TeamRequestsService {
           where: { id: s.playerId },
           relations: ['user'],
         });
-        if (!player?.user?.email) continue;
+        if (!player?.user) continue;
 
         const mates = (tr.squad || [])
           .filter((o: any) => o.playerId !== s.playerId)
           .map((o: any) => `${o.playerName} — ${o.playerPosition}`);
 
         await this.bookingMail.talentConfirmed(
-          player.user.email,
-          player.user.name,
-          tr,
-          s.amount || 0,
-          mates,
+          player.user.email, player.user.name, tr, s.amount || 0, mates,
         );
+        await this.sms.talentConfirmed(player.user.phone || null, {
+          matchDate: tr.matchDate,
+          venue: tr.location,
+          fee: s.amount || 0,
+        });
       }
       return;
     }
 
     if (status === TeamRequestStatus.PLAYER_ON_THE_WAY) {
       await this.bookingMail.playersOnTheWay(email, name, tr);
+      await this.sms.hirerOnTheWay(phone, tr.matchDate);
       return;
     }
 
@@ -146,6 +159,7 @@ export class TeamRequestsService {
 
     if (status === TeamRequestStatus.CANCELLED) {
       await this.bookingMail.teamCancelled(email, name, tr, tr.adminNote);
+      await this.sms.hirerCancelled(phone, tr.matchDate);
     }
   }
 }
