@@ -13,6 +13,7 @@ import {
   TxKind, TxRefType, TxMethod, TxStatus, PaymentStatus,
 } from '../common/enums';
 import { RecordPaymentDto, RecordPayoutDto, RecordDirectDto } from './dto/payment.dto';
+import { Order } from '../shop/entities/order.entity';
 
 /** Which commission + advance setting keys apply to each booking type. */
 const RULES: Record<TxRefType, { commissionKey: string; advanceKey: string }> = {
@@ -38,13 +39,14 @@ const DEFAULTS: Record<string, number> = {
 export class PaymentsService {
   private readonly logger = new Logger(PaymentsService.name);
 
-  constructor(
+      constructor(
     @InjectRepository(Transaction) private txRepo: Repository<Transaction>,
     @InjectRepository(Setting) private settingsRepo: Repository<Setting>,
     @InjectRepository(Booking) private bookingRepo: Repository<Booking>,
     @InjectRepository(TeamRequest) private teamRepo: Repository<TeamRequest>,
     @InjectRepository(CameramanBooking) private camRepo: Repository<CameramanBooking>,
     @InjectRepository(VehicleBooking) private vehRepo: Repository<VehicleBooking>,
+    @InjectRepository(Order) private orderRepo: Repository<Order>,
     private dataSource: DataSource,
   ) {}
 
@@ -94,6 +96,7 @@ export class PaymentsService {
       case TxRefType.TEAM_REQUEST: return this.teamRepo;
       case TxRefType.CAMERAMAN_BOOKING: return this.camRepo;
       case TxRefType.VEHICLE_BOOKING: return this.vehRepo;
+      case TxRefType.ORDER: return this.orderRepo;
       default:
         throw new BadRequestException(`Payments are not wired up for ${refType} yet`);
     }
@@ -109,7 +112,7 @@ export class PaymentsService {
     return found as any;
   }
 
-  /** The agreed total. Falls back through the type-specific fields. */
+   /** The agreed total. Falls back through the type-specific fields. */
   private totalOf(refType: TxRefType, ref: any): number {
     const candidates = refType === TxRefType.BOOKING
       ? [ref.finalAmount, ref.amount]
@@ -117,7 +120,9 @@ export class PaymentsService {
         ? [ref.finalAmount, ref.estimatedAmount]
         : refType === TxRefType.CAMERAMAN_BOOKING
           ? [ref.finalAmount, ref.quotedRate]
-          : [ref.finalAmount, ref.budget];
+          : refType === TxRefType.ORDER
+            ? [ref.total]
+            : [ref.finalAmount, ref.budget];
     const total = candidates.find(v => typeof v === 'number' && v > 0);
     if (!total) {
       throw new BadRequestException(

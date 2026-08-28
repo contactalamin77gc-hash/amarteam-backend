@@ -1,3 +1,5 @@
+//src/common/enums.ts
+
 export enum Role {
   ADMIN = 'admin',
   PLAYER = 'player',
@@ -153,4 +155,10 @@ export enum PaymentStatus {
   ADVANCE_PAID = 'advancePaid',
   FULLY_PAID = 'fullyPaid',
   REFUNDED = 'refunded',
+}
+
+export enum ClaimStatus {
+  PENDING = 'pending',
+  APPROVED = 'approved',
+  REJECTED = 'rejected',
 }

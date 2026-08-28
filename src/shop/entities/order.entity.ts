@@ -2,7 +2,7 @@ import {
   Entity, PrimaryGeneratedColumn, Column,
   CreateDateColumn, UpdateDateColumn, ManyToOne,
 } from 'typeorm';
-import { OrderStatus } from '../../common/enums';
+import { OrderStatus, PaymentStatus } from '../../common/enums';
 import { User } from '../../users/entities/user.entity';
 
 @Entity('orders')
@@ -73,6 +73,23 @@ export class Order {
 
   @Column({ type: 'text', nullable: true })
     adminNote!: string;
+
+      // ─── Payment ───
+
+  @Column({ type: 'int', nullable: true })
+    commissionRate!: number | null;
+
+  @Column({ type: 'int', nullable: true })
+    commissionAmount!: number | null;
+
+  @Column({ type: 'int', default: 0 })
+    amountPaid!: number;
+
+  @Column({ type: 'int', default: 0 })
+    payoutPaid!: number;
+
+  @Column({ type: 'enum', enum: PaymentStatus, default: PaymentStatus.UNPAID })
+    paymentStatus!: PaymentStatus;
 
   @CreateDateColumn()
     createdAt!: Date;

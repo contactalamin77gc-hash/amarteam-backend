@@ -9,12 +9,13 @@ import { TeamRequest } from '../team-requests/entities/team-request.entity';
 import { CameramanBooking } from '../cameramen/entities/cameraman-booking.entity';
 import { VehicleBooking } from '../vehicles/entities/vehicle-booking.entity';
 import { PlayersModule } from '../players/players.module';
+import { Order } from '../shop/entities/order.entity';
 
 @Module({
   imports: [
     TypeOrmModule.forFeature([
       Transaction, Setting, Booking,
-      TeamRequest, CameramanBooking, VehicleBooking,
+      TeamRequest, CameramanBooking, VehicleBooking,Order,
     ]),
     PlayersModule,
   ],
