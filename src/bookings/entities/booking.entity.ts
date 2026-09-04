@@ -20,6 +20,9 @@ export class Booking {
   @Column()
     hirerId!: string;
 
+  @Column({ nullable: true })
+phone!: string;
+
   @ManyToOne(() => Player, (player) => player.bookings, { eager: true })
     player!: Player;
 

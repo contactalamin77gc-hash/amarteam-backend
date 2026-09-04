@@ -48,6 +48,9 @@ export class TeamRequest {
   @Column({ type: 'enum', enum: TeamRequestStatus, default: TeamRequestStatus.CALLING_SOON })
   status!: TeamRequestStatus;
 
+  @Column({ nullable: true })
+phone!: string;
+
   @Column({ type: 'text', nullable: true })
   adminNote!: string;
 

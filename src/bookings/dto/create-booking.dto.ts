@@ -1,4 +1,4 @@
-import { IsString, IsUUID, IsDateString, IsOptional, MaxLength, IsEnum } from 'class-validator';
+import { IsString, IsUUID, IsDateString, IsOptional, MaxLength, IsEnum, Matches } from 'class-validator';
 
 export class CreateBookingDto {
   @IsUUID()
@@ -13,6 +13,10 @@ export class CreateBookingDto {
 
   @IsEnum(['friendly', 'groupRound', 'final'])
   matchType!: string;
+
+  @IsString()
+  @Matches(/^01\d{9}$/, { message: 'Enter a valid BD phone number (01XXXXXXXXX)' })
+  phone!: string;
 
   @IsOptional()
   @IsString()

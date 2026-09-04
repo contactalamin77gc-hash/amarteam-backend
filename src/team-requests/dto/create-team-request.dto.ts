@@ -1,6 +1,6 @@
 import {
   IsNumber, IsOptional, IsString, Min, Max,
-  MaxLength, IsArray, IsDateString, ValidateNested,
+  MaxLength, IsArray, IsDateString, ValidateNested, Matches,
 } from 'class-validator';
 import { Type } from 'class-transformer';
 
@@ -29,6 +29,10 @@ export class CreateTeamRequestDto {
 
   @IsNumber() @Min(1) @Max(30)
   playersNeeded!: number;
+
+  @IsString()
+  @Matches(/^01\d{9}$/, { message: 'Enter a valid BD phone number (01XXXXXXXXX)' })
+  phone!: string;
 
   @IsOptional() @IsString() @MaxLength(1000)
   message?: string;
