@@ -1,7 +1,19 @@
 import { PipeTransform, Injectable, ArgumentMetadata } from '@nestjs/common';
-import sanitizeHtml from 'sanitize-html';
 
 const SKIP_KEYS = ['password', 'newPassword', 'confirmPassword', 'token', 'code'];
+
+function stripTags(str: string): string {
+  return str
+    .replace(/<script[\s\S]*?<\/script>/gi, '')
+    .replace(/<style[\s\S]*?<\/style>/gi, '')
+    .replace(/<[^>]*>/g, '')
+    .replace(/&lt;/g, '<')
+    .replace(/&gt;/g, '>')
+    .replace(/&amp;/g, '&')
+    .replace(/&quot;/g, '"')
+    .replace(/&#x27;/g, "'")
+    .trim();
+}
 
 @Injectable()
 export class SanitizePipe implements PipeTransform {
@@ -14,7 +26,7 @@ export class SanitizePipe implements PipeTransform {
     if (key && SKIP_KEYS.includes(key)) return value;
 
     if (typeof value === 'string') {
-      return sanitizeHtml(value, { allowedTags: [], allowedAttributes: {} }).trim();
+      return stripTags(value);
     }
     if (Array.isArray(value)) {
       return value.map(v => this.clean(v));

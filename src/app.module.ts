@@ -22,6 +22,7 @@ import { ShopModule } from './shop/shop.module';
 import { CameramenModule } from './cameramen/cameramen.module';
 import { SettingsModule } from './settings/settings.module';
 import { PaymentsModule } from './payments/payments.module';
+import { PlayerRequestsModule } from './player-requests/player-requests.module';
 
 
 @Module({
@@ -74,6 +75,7 @@ import { PaymentsModule } from './payments/payments.module';
     CameramenModule,
     SettingsModule,
     PaymentsModule,
+    PlayerRequestsModule,
   ],
   providers: [
     { provide: APP_GUARD, useClass: ThrottlerGuard },
